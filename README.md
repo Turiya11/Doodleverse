@@ -1,7 +1,7 @@
 # Doodleverse: From Imagination to Interaction
 
 <p align="center">
-  <img src="assets/doodleverse-screenshot.png" alt="Doodleverse screenshot" width="720">
+  <img src="assets/doodleverse-awake.jpg" alt="A drawn apple character waking up and popping off the Doodleverse canvas, with the crayon tray and magic wand below" width="720">
 </p>
 
 Doodleverse is a WebXR mixed reality experience for Meta Quest 3 that turns a drawing into a character you can play with. Draw on a virtual easel with your fingertips, wave a magic wand, and your doodle puffs up off the canvas, steps toward you, and opens a portal into a meadow world where you can play catch together.
