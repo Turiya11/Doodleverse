@@ -30,15 +30,11 @@ It all runs in one continuous `immersive-ar` session with hand tracking, gaze-fo
 
 ## Running Doodleverse
 
-No build step: `index.html` loads three.js r170 from jsDelivr via an import map.
+Try it live at **https://doodleverse-five.vercel.app**. There's no build step: `index.html` loads three.js r170 from jsDelivr via an import map.
 
-### Run on desktop (mouse preview)
+### On desktop (mouse preview)
 
-```bash
-python3 -m http.server 8000
-```
-
-Open http://localhost:8000 and press **Try a sample drawing**. Click a crayon or the eraser on the tray, then drag on the canvas. ⌘/Ctrl+Z undoes, C clears, Esc returns to the landing screen.
+Open the [live site](https://doodleverse-five.vercel.app) and press **Try a sample drawing**. Click a crayon or the eraser on the tray, then drag on the canvas. ⌘/Ctrl+Z undoes, C clears, Esc returns to the landing screen.
 
 ### Laptop tour (no headset)
 
@@ -57,15 +53,9 @@ Open the site on a laptop and press **Laptop tour (emulated headset)**. It loads
 
 A controls card sits in the bottom-right corner during the tour. Add `?tour` to the URL to show the tour button even where real WebXR is available.
 
-### Run on Meta Quest
+### On Meta Quest
 
-WebXR needs a secure context; `localhost` counts, so forward the port over USB instead of setting up HTTPS:
-
-```bash
-adb reverse tcp:8000 tcp:8000
-```
-
-Then open http://localhost:8000 in the Quest browser and press **Enter Doodleverse**.
+Open https://doodleverse-five.vercel.app in the Quest browser and press **Enter Doodleverse**.
 
 - The canvas appears in front of you, a little below eye level. Hold the Meta button to re-centre it.
 - **Hold your tools:** pinch a crayon to pick it up and draw with its tip; pinch the eraser and rub to erase. Let go and they float back to the tray. Tapping still just chooses a tool for your finger.
@@ -94,8 +84,6 @@ Then open http://localhost:8000 in the Quest browser and press **Enter Doodlever
 - **Catch it back:** bring both hands together (palms within 30 cm) where the ball is arriving and it settles between them. Pinch it to pick it up; move your hands apart to drop it.
 - **Exit:** a red diamond floats above the canvas. Point at it (it glows) and pinch to go back to drawing. This uses WebXR's select event, so it works with hands or controllers. On desktop, click it.
 - A **How to Play** card and a **Back to Drawing** button float to the left of the canvas once it wakes (poke the button). On desktop and phone AR they're HTML instead.
-
-Live at https://doodleverse-five.vercel.app. To redeploy, copy the app files into `doodleverse/` and run `npx vercel deploy --prod` there.
 
 Every finished stroke lives in `window.doodleverse.strokes` (canvas-local `points`, `color`, the smoothed `curve`, and the scene `object`).
 
