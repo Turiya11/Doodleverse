@@ -8,7 +8,7 @@ Doodleverse is a WebXR mixed reality experience for Meta Quest 3 that turns a dr
 
 **Live demo:** https://doodleverse-five.vercel.app
 
-Built as a Semester 7 AR/VR project at MIT-WPU, for children aged 12+ (and adults too).
+Built as a Semester 7 AR/VR project , for children aged 12+ (and adults too).
 
 ## Design principles
 
