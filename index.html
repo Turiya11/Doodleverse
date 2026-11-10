@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doodleverse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+      background: linear-gradient(135deg, #fff0f5 0%, #e0f7fa 100%);
+      font-family: 'Nunito', system-ui, sans-serif;
+      color: #333;
+    }
+    canvas { display: block; }
+
+    /* Landing screen (2D, before WebXR) */
+    #landing {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; box-sizing: border-box; overflow: hidden;
+      background: inherit;
+    }
+    body.in-preview #landing { display: none; }
+
+    .landing-container {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 520px; box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.9);
+      border: 4px solid #fff; border-radius: 30px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    h1 {
+      font-family: 'Fredoka One', 'Nunito', cursive;
+      font-weight: 400;
+      color: #ff6b6b;
+      font-size: clamp(1.6rem, 7vw, 3.5rem);
+      margin: 0;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 0 #ffd93d, 4px 4px 0 #4ecdc4;
+    }
+    .tagline { color: #555; font-size: 1.2rem; margin: 12px 0 30px; }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 15px 30px; margin: 10px 0;
+      border: none; border-radius: 50px;
+      font: 800 1.2rem 'Nunito', system-ui, sans-serif;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary { background: #ff758f; color: #fff; box-shadow: 0 6px 0 #c9184a; }
+    .btn-secondary { background: #fee440; color: #333; box-shadow: 0 6px 0 #e5a910; }
+    .btn-tour { background: #4ecdc4; color: #123; box-shadow: 0 6px 0 #2a9d95; }
+    .btn[hidden] { display: none; }
+    .btn:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 0 0 transparent; }
+    .btn:focus-visible { outline: 3px solid #4ecdc4; outline-offset: 4px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #xr-note { min-height: 1.4em; margin: 14px 0 0; font-size: 0.95rem; color: #777; }
+
+    .cloud {
+      position: absolute; z-index: 0;
+      width: 180px; height: 56px;
+      background: #fff; border-radius: 56px; opacity: 0.8;
+      animation: drift 40s linear infinite;
+    }
+    .cloud::before, .cloud::after {
+      content: ''; position: absolute; background: #fff; border-radius: 50%;
+    }
+    .cloud::before { width: 70px; height: 70px; top: -34px; left: 28px; }
+    .cloud::after { width: 90px; height: 90px; top: -50px; right: 26px; }
+    .cloud.c1 { top: 14%; left: -10%; }
+    .cloud.c2 { top: 70%; left: 60%; transform: scale(1.3); animation-duration: 55s; animation-delay: -20s; }
+    .cloud.c3 { top: 40%; left: 80%; transform: scale(0.8); animation-duration: 48s; animation-delay: -35s; }
+    @keyframes drift { from { translate: -30vw 0; } to { translate: 130vw 0; } }
+    @media (prefers-reduced-motion: reduce) { .cloud { animation: none; } }
+
+    /* Desktop preview HUD */
+    #hud {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 12px;
+      max-width: calc(100% - 32px); box-sizing: border-box;
+      padding: 6px 6px 6px 18px;
+      background: rgba(25, 42, 86, 0.85); color: #fff;
+      border: 2px solid #4ecdc4; border-radius: 999px;
+      font-weight: 600; font-size: 14px;
+    }
+    body.in-preview #hud { display: flex; }
+    #hud-text { white-space: nowrap; }
+    @media (max-width: 560px) { .hud-hint { display: none; } }
+    @media (max-width: 400px) { #hud-text { display: none; } #hud { padding-left: 6px; } }
+    #hud button {
+      flex-shrink: 0; border: none; border-radius: 999px; padding: 6px 14px;
+      background: #fee440; color: #333; font: 800 13px 'Nunito', system-ui, sans-serif; cursor: pointer;
+    }
+    #hud #life-btn { background: #ff758f; color: #fff; }
+    #hud button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* How to Play card + Back to Drawing. Shown in the desktop preview once the character wakes, and
+       used as the WebXR DOM overlay on phones. Headsets don't show HTML, so app.js draws a 3D copy. */
+    #xr-overlay { position: fixed; inset: 0; pointer-events: none; display: none; }
+    body.in-preview #xr-overlay, body.in-xr #xr-overlay { display: block; }
+    /* How to Draw while drawing; How to Play once the character is awake. */
+    #how-to { display: none; }
+    body.awake #how-to { display: block; }
+    body.awake #how-to-draw { display: none; }
+    .guide-card {
+      position: absolute; top: 50%; left: 16px; transform: translateY(-50%);
+      width: 280px; max-width: calc(100% - 32px); box-sizing: border-box;
+      background: rgba(25, 42, 86, 0.85); color: #fff;
+      padding: 22px; border: 3px solid #4ecdc4; border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .guide-card { pointer-events: auto; }
+    .guide-card summary { cursor: pointer; list-style: none; }
+    .guide-card summary::-webkit-details-marker { display: none; }
+    .guide-card summary h3::after { content: ' ▾'; font-size: 14px; color: #4ecdc4; }
+    .guide-card:not([open]) summary h3 { margin: 0; }
+    .guide-card:not([open]) summary h3::after { content: ' ▸'; }
+    .guide-card h3 { display: inline; margin: 0 0 12px; color: #ffcc00; font-size: 20px; font-family: 'Fredoka One', 'Nunito', sans-serif; font-weight: 400; }
+    .guide-card ul, .guide-card ol { margin: 6px 0 0; padding-left: 20px; font-size: 15px; line-height: 1.45; }
+    .guide-card li { margin-bottom: 6px; }
+    .guide-card h4 { margin: 12px 0 0; color: #4ecdc4; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .guide-card .note { margin: 4px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); font-size: 14px; line-height: 1.45; }
+    .guide-card { max-height: calc(100% - 100px); overflow-y: auto; width: 320px; }
+    .guide-card b { color: #33ccff; }
+    body.in-xr .desktop-only { display: none; }
+    #xr-reset {
+      position: absolute; top: 16px; right: 16px; display: none; pointer-events: auto;
+      padding: 10px 20px; border: none; border-radius: 999px; cursor: pointer;
+      background: #ffcc00; color: #111; box-shadow: 0 4px 0 #cc9900;
+      font: 800 16px 'Nunito', system-ui, sans-serif;
+    }
+    #xr-reset:active { transform: translateY(4px); box-shadow: none; }
+    body.in-xr.awake #xr-reset { display: block; }
+
+    /* Laptop tour: the in-headset 3D cards do the explaining; this card lists the controls. */
+    body.tour .guide-card, body.tour.awake #how-to { display: none; }
+    body.tour #xr-overlay { z-index: 1000; } /* the emulator puts the XR canvas in a layer at z-index 999 */
+    #tour-keys { display: none; }
+    body.tour.in-xr #tour-keys {
+      display: block; position: absolute; right: 16px; bottom: 16px; pointer-events: auto;
+      width: 310px; box-sizing: border-box; padding: 14px 16px;
+      background: rgba(25, 42, 86, 0.82); color: #fff; border: 2px solid #4ecdc4; border-radius: 16px;
+      font-size: 13px; line-height: 1.5;
+    }
+    #tour-keys summary { cursor: pointer; font-family: 'Fredoka One', 'Nunito', sans-serif; color: #ffcc00; font-size: 16px; }
+    #tour-keys dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 8px 0 0; }
+    #tour-keys dt { color: #4ecdc4; font-weight: 800; white-space: nowrap; }
+    #tour-keys dd { margin: 0; }
+    /* On narrow screens the card moves to the bottom so it doesn't cover the character. */
+    @media (max-width: 600px) {
+      .guide-card { top: auto; bottom: 16px; left: 16px; right: 16px; width: auto; transform: none; padding: 16px; }
+      .guide-card ul, .guide-card ol { font-size: 14px; }
+      .guide-card { max-height: 60vh; width: auto; }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+        "iwer": "https://cdn.jsdelivr.net/npm/iwer@2.5.0/build/iwer.module.js",
+        "@iwer/sem": "https://cdn.jsdelivr.net/npm/@iwer/sem@2.5.0/build/es/index.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="landing">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+    <div class="landing-container">
+      <h1>DOODLEVERSE</h1>
+      <p class="tagline">Your drawings have a world of their own.</p>
+      <button id="enter-btn" class="btn btn-primary" disabled>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Enter Doodleverse
+      </button>
+      <button id="sample-btn" class="btn btn-secondary">Try a sample drawing</button>
+      <button id="tour-btn" class="btn btn-tour" hidden>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="5"/><circle cx="8" cy="12.5" r="2"/><circle cx="16" cy="12.5" r="2"/></svg>
+        Laptop tour (emulated headset)
+      </button>
+      <p id="xr-note" role="status"></p>
+    </div>
+  </div>
+
+  <div id="hud">
+    <span id="hud-text"><span class="hud-hint" id="hud-hint">Click a crayon · drag on the canvas · ⌘/Ctrl+Z undo · C clear · </span><span id="hud-count"></span></span>
+    <button id="life-btn">Bring to life</button>
+    <button id="back-btn">Back</button>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+  <div id="xr-overlay">
+    <details id="how-to-draw" class="guide-card" open>
+      <summary><h3>How to Draw</h3></summary>
+      <ol>
+        <li><b>Draw:</b> touch the board with your index finger, or <b>pinch a crayon to pick it up</b> and draw with its tip. Let go and it goes back to the tray.</li>
+        <li><b>Neon crayon:</b> the glowing purple one draws with <b>light</b>!</li>
+        <li><b>Erase:</b> pinch the eraser and rub it over a line. (Tapping a crayon or the eraser also chooses it for your finger.)</li>
+        <li><b>Bring it to life:</b> pinch the <b>magic wand</b> and <b>wave it in a circle</b>. Sparkles stream from the star and it sings louder the faster you wave. Or just tap the green Done button.</li>
+      </ol>
+      <ul>
+        <li><b>Too far to reach?</b> Point at a crayon, the eraser or a button: a yellow ray appears. Pinch to choose it.</li>
+        <li><b>Move the board:</b> pinch the grey handle under the tray and move your hand. The board turns to face you.</li>
+        <li><b>Lost?</b> A small sign below your view always says what to do next, and an arrow points back to your board or your friend.</li>
+        <li><b>Exit:</b> tap the red Exit button, then tap it again.</li>
+        <li class="desktop-only"><b>On a computer:</b> click a crayon, drag on the board to draw, drag the grey handle to move it, and drag the wand in circles to bring it to life.</li>
+      </ul>
+    </details>
+    <details id="how-to" class="guide-card" open>
+      <summary><h3>How to Play</h3></summary>
+      <h4>Play fetch</h4>
+      <ol>
+        <li><b>Pick up the ball:</b> pinch it in the basket (or off the floor).</li>
+        <li><b>Throw it anywhere:</b> let go while your hand is moving. Your friend hops after it and catches it.</li>
+        <li><b>Catch it back:</b> when it throws the ball to you, bring <b>both hands together</b> where it's coming.</li>
+      </ol>
+      <p class="note"><b>Missed it?</b> The ball hops back into the basket by itself.<br>
+        <b>Tidy up:</b> hold the ball over the basket until its rim glows green, then let go.</p>
+      <h4>More</h4>
+      <ul>
+        <li><b>Carry your friend:</b> pinch it with both hands and lift.</li>
+        <li><b>Make it jump:</b> while carrying it, flick your hands up.</li>
+        <li><b>Walk around:</b> explore your room safely.</li>
+        <li><b>Exit:</b> point at the red floating diamond and pinch.</li>
+        <li class="desktop-only"><b>On a computer:</b> drag the ball or your friend with the mouse and let go to throw; click the ball in the air to catch it; click the diamond to exit.</li>
+      </ul>
+    </details>
+    <button id="xr-reset">Back to Drawing</button>
+    <details id="tour-keys" open>
+      <summary>Laptop tour controls</summary>
+      <dl>
+        <dt>Mouse</dt><dd>move your fingertip</dd>
+        <dt>Click / drag</dt><dd>touch: draw, press buttons</dd>
+        <dt>Space</dt><dd>pinch: pick up, carry, let go to throw</dd>
+        <dt>Shift</dt><dd>both hands (carry your friend, catch)</dd>
+        <dt>W A S D</dt><dd>walk</dd>
+        <dt>Arrows / Alt+mouse</dt><dd>look around</dd>
+        <dt>Q / E</dt><dd>crouch / stand</dd>
+        <dt>Esc</dt><dd>leave the tour</dd>
+      </dl>
+    </details>
+  </div>
+</body>
+</html>
